@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { createData, fetchData } from "../service/Api";
+import { createData, deleteData, fetchData } from "../service/Api";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 import { Button, Modal } from "react-bootstrap";
+
 interface Post {
   id: number;
   title: string;
@@ -22,7 +22,8 @@ function ListPost() {
     userId: "",
     title: "",
     body: "",
-  })
+  });
+
   const navigate = useNavigate();
 
   const getPost = async () => {
@@ -68,29 +69,44 @@ function ListPost() {
       [e.target.id]: e.target.value,
     });
   };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-  
-    const endpoint = "/posts"; // Cập nhật endpoint nếu cần thiết
+
+    const endpoint = "/posts";
     const newPostData = {
       userId: newPost.userId,
       title: newPost.title,
       body: newPost.body,
     };
-  
+
     const response = await createData<typeof newPostData>(endpoint, newPostData);
-    
+
     if ("error" in response) {
       console.error("Error creating post", response.error);
-      setError(response.error); // Cập nhật lỗi nếu có
+      setError(response.error);
     } else {
       console.log("Post created successfully:", response);
+      // Add the new post to the posts state
+      const createdPost = { id: Date.now(), ...newPostData }; // Use a temporary id for now
+      setPosts([createdPost, ...posts]);
       setShow(false);
-      getPost(); // Refresh the post list
-      toast.success("added successfully!!")
+      toast.success("Added successfully!");
     }
   };
-  
+
+  const handleDelete = async (postid: number) => {
+    const response = await deleteData(`/posts/${postid}`);
+    if ("error" in response) {
+      console.error("Error deleting post", response.error);
+      setError(response.error);
+    } else {
+      console.log("Post deleted successfully:", response);
+      // Remove the deleted post from the posts state
+      setPosts(posts.filter((post) => post.id !== postid));
+      toast.success("Post deleted successfully!");
+    }
+  };
 
   useEffect(() => {
     getPost();
@@ -98,8 +114,8 @@ function ListPost() {
 
   return (
     <div className="flex flex-col">
-<ToastContainer/>
-     <div className="relative max-w-sm mx-auto mt-20">
+      <ToastContainer />
+      <div className="relative max-w-sm mx-auto mt-20">
         <input
           className="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           type="text"
@@ -125,13 +141,15 @@ function ListPost() {
           </svg>
         </button>
       </div>
+
       <div className="flex flex-col w-full sm:w-auto sm:flex-row p-4">
-        <button onClick={handleShow}
-          className="flex flex-row items-center justify-center w-full px-4 py-4 mb-4 text-sm font-bold bg-green-300 leading-6 capitalize duration-100 transform rounded-sm shadow cursor-pointer focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 focus:outline-none sm:mb-0 sm:w-auto sm:mr-4 md:pl-8 md:pr-6 xl:pl-12 xl:pr-10   hover:shadow-lg hover:-translate-y-1">
+        <button
+          onClick={handleShow}
+          className="flex flex-row items-center justify-center w-full px-4 py-4 mb-4 text-sm font-bold bg-green-300 leading-6 capitalize duration-100 transform rounded-sm shadow cursor-pointer focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 focus:outline-none sm:mb-0 sm:w-auto sm:mr-4 md:pl-8 md:pr-6 xl:pl-12 xl:pr-10 hover:shadow-lg hover:-translate-y-1"
+        >
           Create new Post
-          <span className="ml-4">
-          </span>
         </button>
+
         <Modal show={show} onHide={handleClose}>
           <Modal.Header closeButton>
             <Modal.Title>Add new post</Modal.Title>
@@ -139,18 +157,37 @@ function ListPost() {
           <Modal.Body>
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label htmlFor="id" className="form-label">Post User ID</label>
-                <input type="text" className="form-control" value={newPost.userId} id="userId" onChange={handleChange}
+                <label htmlFor="id" className="form-label">
+                  Post User ID
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={newPost.userId}
+                  id="userId"
+                  onChange={handleChange}
                 />
               </div>
               <div className="mb-3">
                 <label className="form-label">Post Title</label>
-                <input type="text" className="form-control" value={newPost.title} id="title" onChange={handleChange} />
+                <input
+                  type="text"
+                  className="form-control"
+                  value={newPost.title}
+                  id="title"
+                  onChange={handleChange}
+                />
               </div>
               <div className="mb-3">
-                <label htmlFor="message" className="form-label">Post Body</label>
-                <textarea className="form-control" id="body" value={newPost.body} onChange={handleChange}>
-                </textarea>
+                <label htmlFor="message" className="form-label">
+                  Post Body
+                </label>
+                <textarea
+                  className="form-control"
+                  id="body"
+                  value={newPost.body}
+                  onChange={handleChange}
+                ></textarea>
               </div>
               <Button variant="primary" type="submit">
                 Submit
@@ -159,6 +196,7 @@ function ListPost() {
           </Modal.Body>
         </Modal>
       </div>
+
       {loading && <p className="text-center">Loading...</p>}
       {error && <p className="text-red-500 text-center">{error}</p>}
 
@@ -168,14 +206,17 @@ function ListPost() {
             <table className="min-w-full">
               <thead className="bg-white border-b">
                 <tr>
-                  <th scope="col" className="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                  <th
+                    scope="col"
+                    className="text-sm font-medium text-gray-900 px-6 py-4 text-left"
+                  >
                     Post Id
                   </th>
-                  <th scope="col" className="text-sm font-medium text-gray-900 px-6 py-4 text-left">
+                  <th
+                    scope="col"
+                    className="text-sm font-medium text-gray-900 px-6 py-4 text-left"
+                  >
                     Post Title
-                  </th>
-                  <th scope="col" className="text-sm font-medium text-gray-900 px-6 py-4 text-left">
-                    Actions
                   </th>
                 </tr>
               </thead>
@@ -189,17 +230,20 @@ function ListPost() {
                       <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
                         {post.title}
                       </td>
-                      <td className="text-sm font-bold text-gray-900 hover:text-slate-400 px-6 py-2 whitespace-nowrap">
-                        <button onClick={() => handlePost(post.id)}>
-                          View Detail
-                        </button>
-
+                      <td className="text-sm font-bold text-gray-900 hover:text-slate-400 whitespace-nowrap">
+                        <button onClick={() => handlePost(post.id)}>View Detail</button>
+                      </td>
+                      <td className="text-sm font-bold text-gray-900 hover:text-slate-400 whitespace-nowrap">
+                        <button onClick={() => handleDelete(post.id)}>Delete</button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} className="text-sm text-gray-900 px-6 py-4 text-center">
+                    <td
+                      colSpan={3}
+                      className="text-sm text-gray-900 px-6 py-4 text-center"
+                    >
                       Nothing found
                     </td>
                   </tr>
@@ -210,7 +254,6 @@ function ListPost() {
         </div>
       </div>
     </div>
-
   );
 }
 

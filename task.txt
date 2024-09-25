@@ -1,0 +1,12 @@
+Viết trang web sử dụng API: https://jsonplaceholder.typicode.com/
+1. Chức năng Thêm, sửa hay xóa một post (bao gồm các comment của post này).
+2. Chức năng Thêm, sửa hay xóa một album (bao gồm các photo của album này).
+3. Chức năng Thêm, sửa hay xóa user
+4. Chức năng Thêm, sửa hay xóa task của một user
+5. Chức năng Thêm, sửa hay xóa post của một user.
+6. Hoàn thiện giao diện: thiết kế layout phù hợp cho từng item (Post, comment, Album, User, Task của một user, Post của một user)
+7. Hoàn thiện menu cho phù hợp: nhóm các thao tác CRUD cho từng item.
+
+Lưu ý: 
+ - có API nào (Post, Put, Delete) thì dùng API đó. 
+ - Sử dụng Typescript

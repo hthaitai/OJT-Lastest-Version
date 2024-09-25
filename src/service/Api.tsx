@@ -34,3 +34,29 @@ export const createData = async <T = any>(endpoint: string, data: T): Promise<T 
     return { error: errorMessage as string };
   }
 };
+export const deleteData = async <T = any>(endpoint: string): Promise<T | { error: string }> => {
+  try {
+    const response: AxiosResponse<T> = await apiLink.delete<T>(endpoint);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting data', error);
+    const errorMessage = axios.isAxiosError(error) && error.response 
+      ? error.response.data 
+      : 'Error at deleting data';
+
+    return { error: errorMessage as string };
+  }
+};
+export const updateData = async <T = any>(endpoint: string, data: T): Promise<T | { error: string }> => {
+  try {
+    const response: AxiosResponse<T> = await apiLink.put<T>(endpoint, data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating data', error);
+    const errorMessage = axios.isAxiosError(error) && error.response 
+      ? error.response.data 
+      : 'Error at updating data';
+
+    return { error: errorMessage as string };
+  }
+};
