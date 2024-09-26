@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { createData, deleteData, fetchData } from "../service/Api";
+import { createData, deleteData, fetchData, updateData } from "../service/Api";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -16,6 +16,8 @@ function ListPost() {
   const [searchInput, setSearchInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [show, setShow] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false); // Track whether editing or creating
+  const [editingPostId, setEditingPostId] = useState<number | null>(null); // Track the post being edited
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const [newPost, setNewPost] = useState({
@@ -31,7 +33,6 @@ function ListPost() {
     const response = await fetchData<Post[]>("/posts");
     setLoading(false);
 
-    // Type guard to check if response is an error
     if ("error" in response) {
       setError(response.error);
     } else {
@@ -73,26 +74,41 @@ function ListPost() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const endpoint = "/posts";
-    const newPostData = {
-      userId: newPost.userId,
-      title: newPost.title,
-      body: newPost.body,
-    };
+    if (isEditMode && editingPostId !== null) {
+      // Update mode
+      const endpoint = `/posts/${editingPostId}`;
+      const response = await updateData(endpoint, newPost);
 
-    const response = await createData<typeof newPostData>(endpoint, newPostData);
-
-    if ("error" in response) {
-      console.error("Error creating post", response.error);
-      setError(response.error);
+      if ("error" in response) {
+        console.error("Error updating post", response.error);
+        setError(response.error);
+      } else {
+        setPosts(
+          posts.map((post) =>
+            post.id === editingPostId ? { ...post, ...newPost } : post
+          )
+        );
+        setShow(false);
+        toast.success("Post updated successfully!");
+      }
     } else {
-      console.log("Post created successfully:", response);
-      // Add the new post to the posts state
-      const createdPost = { id: Date.now(), ...newPostData }; // Use a temporary id for now
-      setPosts([createdPost, ...posts]);
-      setShow(false);
-      toast.success("Added successfully!");
+      // Create mode
+      const endpoint = "/posts";
+      const response = await createData(endpoint, newPost);
+
+      if ("error" in response) {
+        console.error("Error creating post", response.error);
+        setError(response.error);
+      } else {
+        const createdPost = { id: Date.now(), ...newPost };
+        setPosts([createdPost, ...posts]);
+        setShow(false);
+        toast.success("Post created successfully!");
+      }
     }
+
+    setIsEditMode(false); // Reset the edit mode
+    setEditingPostId(null); // Reset the post being edited
   };
 
   const handleDelete = async (postid: number) => {
@@ -101,11 +117,20 @@ function ListPost() {
       console.error("Error deleting post", response.error);
       setError(response.error);
     } else {
-      console.log("Post deleted successfully:", response);
-      // Remove the deleted post from the posts state
       setPosts(posts.filter((post) => post.id !== postid));
       toast.success("Post deleted successfully!");
     }
+  };
+
+  const handleEdit = (post: Post) => {
+    setIsEditMode(true);
+    setEditingPostId(post.id);
+    setNewPost({
+      userId: String(post.id),
+      title: post.title,
+      body: "",
+    });
+    handleShow();
   };
 
   useEffect(() => {
@@ -144,7 +169,10 @@ function ListPost() {
 
       <div className="flex flex-col w-full sm:w-auto sm:flex-row p-4">
         <button
-          onClick={handleShow}
+          onClick={() => {
+            setIsEditMode(false); // Ensure we're in create mode
+            handleShow();
+          }}
           className="flex flex-row items-center justify-center w-full px-4 py-4 mb-4 text-sm font-bold bg-green-300 leading-6 capitalize duration-100 transform rounded-sm shadow cursor-pointer focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 focus:outline-none sm:mb-0 sm:w-auto sm:mr-4 md:pl-8 md:pr-6 xl:pl-12 xl:pr-10 hover:shadow-lg hover:-translate-y-1"
         >
           Create new Post
@@ -152,12 +180,12 @@ function ListPost() {
 
         <Modal show={show} onHide={handleClose}>
           <Modal.Header closeButton>
-            <Modal.Title>Add new post</Modal.Title>
+            <Modal.Title>{isEditMode ? "Edit Post" : "Add new post"}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label htmlFor="id" className="form-label">
+                <label htmlFor="userId" className="form-label">
                   Post User ID
                 </label>
                 <input
@@ -166,6 +194,7 @@ function ListPost() {
                   value={newPost.userId}
                   id="userId"
                   onChange={handleChange}
+                  disabled={isEditMode} // Disable editing the user ID in edit mode
                 />
               </div>
               <div className="mb-3">
@@ -179,7 +208,7 @@ function ListPost() {
                 />
               </div>
               <div className="mb-3">
-                <label htmlFor="message" className="form-label">
+                <label htmlFor="body" className="form-label">
                   Post Body
                 </label>
                 <textarea
@@ -190,7 +219,7 @@ function ListPost() {
                 ></textarea>
               </div>
               <Button variant="primary" type="submit">
-                Submit
+                {isEditMode ? "Update" : "Submit"}
               </Button>
             </form>
           </Modal.Body>
@@ -206,18 +235,13 @@ function ListPost() {
             <table className="min-w-full">
               <thead className="bg-white border-b">
                 <tr>
-                  <th
-                    scope="col"
-                    className="text-sm font-medium text-gray-900 px-6 py-4 text-left"
-                  >
+                  <th scope="col" className="text-sm font-medium text-gray-900 px-6 py-4 text-left">
                     Post Id
                   </th>
-                  <th
-                    scope="col"
-                    className="text-sm font-medium text-gray-900 px-6 py-4 text-left"
-                  >
+                  <th scope="col" className="text-sm font-medium text-gray-900 px-6 py-4 text-left">
                     Post Title
                   </th>
+                
                 </tr>
               </thead>
               <tbody>
@@ -233,17 +257,17 @@ function ListPost() {
                       <td className="text-sm font-bold text-gray-900 hover:text-slate-400 whitespace-nowrap">
                         <button onClick={() => handlePost(post.id)}>View Detail</button>
                       </td>
-                      <td className="text-sm font-bold text-gray-900 hover:text-slate-400 whitespace-nowrap">
+                      <td className="text-sm font-bold text-gray-900 hover:text-green-300 whitespace-nowrap">
+                        <button onClick={() => handleEdit(post)}>Edit</button>
+                      </td>
+                      <td className="text-sm font-bold text-gray-900  hover:text-red-600 whitespace-nowrap">
                         <button onClick={() => handleDelete(post.id)}>Delete</button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan={3}
-                      className="text-sm text-gray-900 px-6 py-4 text-center"
-                    >
+                    <td colSpan={3} className="text-sm text-gray-900 px-6 py-4 text-center">
                       Nothing found
                     </td>
                   </tr>
