@@ -162,6 +162,9 @@ function ViewPostDetail() {
         </div>
       </div>
 
+      <button className="bg-zinc-300 font-semibold text-black p-2 my-4 mx-6 rounded transition duration-300 ease-in-out transform hover:bg-orange-600 hover:text-white hover:scale-105" onClick={handleShow}>
+        Add new Comment
+      </button>
       <div className="w-auto bg-blue-400 rounded-lg border p-2 my-4 mx-6">
         <h3 className="font-bold">Comments</h3>
         {comments.length === 0 ? (
@@ -192,9 +195,6 @@ function ViewPostDetail() {
         )}
       </div>
 
-      <Button onClick={handleShow} variant="primary">
-        Add new Comment
-      </Button>
 
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
