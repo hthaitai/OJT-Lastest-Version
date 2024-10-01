@@ -285,17 +285,19 @@ const handleDelete = async (userId: number) => {
                       <td className="text-sm text-gray-900 font-light px-6 py-4 whitespace-nowrap">
                         {users.name}
                       </td>
-                      <td className="text-sm font-bold text-gray-900 hover:text-green-300 whitespace-nowrap">
-                        <button onClick={() => handleEdit(users)}>Edit</button>
-                      </td>
+                     
                       <td className="text-sm font-bold text-gray-900 hover:text-slate-400 px-6 py-2 whitespace-nowrap">
                         <button onClick={() => handleUser(users.id)}>
                           View Detail
                         </button>
                       </td>
+                      <td className="text-sm font-bold text-gray-900 hover:text-green-300 whitespace-nowrap">
+                        <button onClick={() => handleEdit(users)}>Edit</button>
+                      </td>
                       <td className="text-sm font-bold text-gray-900  hover:text-red-600 whitespace-nowrap">
                         <button onClick={() => handleDelete(users.id)}>Delete</button>
                       </td>
+                      
                     </tr>
                   ))
                 ) : (

@@ -10,6 +10,7 @@ import ViewAlbumDetail from './components/ViewAlbumDetail';
 import ListUser from './components/ListUser';
 import ViewUserDetail from './components/ViewUserDetail';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import Footer from './asset/Footer';
 
 function App() {
   return (
@@ -26,7 +27,7 @@ function App() {
           <Route path="/viewalbumdetail/:id" element={<ViewAlbumDetail />} />
         </Routes>
       </div>
-
+    <Footer/>
     </Router>
 
   );
