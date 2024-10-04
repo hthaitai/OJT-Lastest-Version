@@ -47,6 +47,7 @@ function ViewUserDetail() {
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const [editingPostId, setEditingPostId] = useState<number | null>(null); // Track the post being edited
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null); // Track the post being edited
 
   const [newPosts, setNewPosts] = useState({
     id: 0,
@@ -54,6 +55,11 @@ function ViewUserDetail() {
     body: "",
   });
 
+  const [newTask, setNewTask] = useState({
+    id: 0,
+    title: "",
+    completed: false,
+  });
   useEffect(() => {
     getUserDetail();
     getPosts();
@@ -163,9 +169,58 @@ function ViewUserDetail() {
       [e.target.id]: e.target.value,
     });
   };
+  const handleTaskChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTask({
+      ...newTask,
+      [e.target.id]: e.target.value,
+    });
+  };
+  const handleTaskSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (isEditMode && editingTaskId !== null) {
+      // Update mode
+      const endpoint = `/todos/${editingTaskId}`;
+      const response = await updateData(endpoint, newTask);
+
+      if ("error" in response) {
+        setError(response.error);
+      } else {
+        setTasks(tasks.map((task) => (task.id === editingTaskId ? { ...task, ...newTask } : task)));
+        setShow(false);
+        toast.success("Task updated successfully!");
+      }
+    } else {
+      // Create mode
+      const endpoint = "/todos";
+      const response = await createData(endpoint, newTask);
+
+      if ("error" in response) {
+        setError(response.error);
+      } else {
+        const createdTask = { ...newTask, id: Date.now() };
+        setTasks([createdTask, ...tasks]);
+        setShow(false);
+        toast.success("Task created successfully!");
+      }
+    }
+
+    setIsEditMode(false);
+    setEditingTaskId(null);
+  };
+  const handleTaskDelete = async (taskId: number) => {
+    const response = await deleteData(`/todos/${taskId}`);
+    if ("error" in response) {
+      setError(response.error);
+    } else {
+      setTasks(tasks.filter((task) => task.id !== taskId));
+      toast.success("Task deleted successfully!");
+    }
+  };
+
   return (
     <div>
-      <ToastContainer/>
+      <ToastContainer />
       <div className="max-w-xs mx-auto bg-white rounded-lg shadow-md overflow-hidden mt-24">
         <div className="bg-gray-100 px-4 py-2">
           <h2 className="text-lg font-medium text-gray-800">User ID: {id}</h2>
@@ -304,7 +359,7 @@ function ViewUserDetail() {
                   <tr key={post.id} >
                     <td className="py-4 px-6 border-b border-gray-200">{post.title}</td>
                     <td className="py-4 px-6 border-b border-gray-200">{post.body}</td>
-                    <td className="text-sm font-bold text-gray-900 whitespace-nowrap flex space-x-2">
+                    <td className="text-sm font-bold text-gray-900 whitespace-nowrap pt-4 flex space-x-2">
                       <button
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                         onClick={() => {
@@ -331,11 +386,63 @@ function ViewUserDetail() {
         </div>
       ) : (
         <div className="shadow-lg rounded-lg overflow-hidden mx-4 md:mx-10">
+          <Button
+            variant="primary"
+            onClick={() => {
+              setIsEditMode(false);
+              handleShow();
+            }}
+          >
+            Add New Task
+          </Button>
+
+          <Modal show={show} onHide={handleClose}>
+            <Modal.Header closeButton>
+              <Modal.Title>{isEditMode ? "Edit Task" : "Add New Task"}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <form onSubmit={handleTaskSubmit}>
+                <div className="mb-3">
+                  <label htmlFor="title" className="form-label">
+                    Task Title
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newTask.title}
+                    id="title"
+                    onChange={handleTaskChange}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="completed" className="form-label">
+                    Status
+                  </label>
+                  <select
+                    id="completed"
+                    value={newTask.completed ? "true" : "false"}
+                    onChange={(e) => {
+                      setNewTask({ ...newTask, completed: e.target.value === "true" });
+                    }}
+                  >
+                    <option value="false">Incomplete</option>
+                    <option value="true">Completed</option>
+                  </select>
+                </div>
+
+                <Button variant="primary" type="submit">
+                  {isEditMode ? "Update Task" : "Submit Task"}
+                </Button>
+              </form>
+            </Modal.Body>
+          </Modal>
           <table className="w-full table-fixed">
             <thead>
               <tr className="bg-gray-100">
-                <th className="w-1/4 py-4 px-6 text-left text-gray-600 font-bold uppercase">Task Title</th>
-                <th className="w-1/4 py-4 px-6 text-left text-gray-600 font-bold uppercase">Completed Status</th>
+                <th className="w-3/4 py-4 px-6 text-left text-gray-600 font-bold uppercase">Task Title</th>
+                <th className=" py-4 px-6 text-left text-gray-600 font-bold uppercase">Completed Status</th>
+                <th className=" py-4 px-6 text-left text-gray-600 font-bold uppercase">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -350,12 +457,28 @@ function ViewUserDetail() {
                   <tr key={task.id}>
                     <td className="py-4 px-6 border-b border-gray-200">{task.title}</td>
                     <td className="py-4 px-6 border-b border-gray-200">
-                      <span
-                        className={`py-1 px-2 rounded-full text-xs text-white ${task.completed ? "bg-green-500" : "bg-red-500"
-                          }`}
-                      >
+                      <span className={`py-1 px-2 rounded-full text-xs text-white ${task.completed ? "bg-green-500" : "bg-red-500"}`}>
                         {task.completed ? "Completed" : "Incomplete"}
                       </span>
+                    </td>
+                    <td className="text-sm font-bold text-gray-900 whitespace-nowrap pt-4 flex space-x-2">
+                      <button
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        onClick={() => {
+                          setIsEditMode(true);
+                          setEditingTaskId(task.id);
+                          setNewTask({ title: task.title, completed: task.completed, id: task.id });
+                          handleShow();
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                        onClick={() => handleTaskDelete(task.id)}
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))
